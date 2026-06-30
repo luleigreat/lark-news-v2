@@ -4,6 +4,7 @@ import time
 
 from src.config import RSS_FEEDS, RSS_KEYWORDS_AI, RSS_KEYWORDS_WEB3
 from src.filters.dedup import dedup_articles
+from src.filters.event_dedup import dedup_similar_articles
 from src.models import Article
 from src.sources import google_news, newsapi, rss_feeds
 from src.sources.stats import SearchStats
@@ -63,5 +64,6 @@ def search_direction(
 
     stats.raw_total = len(all_articles)
     deduped = dedup_articles(all_articles)
+    deduped = dedup_similar_articles(deduped)
     stats.after_dedup = len(deduped)
     return deduped, stats

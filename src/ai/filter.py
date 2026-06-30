@@ -7,6 +7,7 @@ from openai import OpenAI
 
 from src.ai.client import chat_complete
 from src.config import FOCUS_COMPANIES, OPENAI_API_KEY
+from src.filters.event_dedup import dedup_similar_items
 from src.models import Article
 
 DIRECTION_LABELS = {
@@ -50,6 +51,12 @@ def filter_articles(
 - 宁缺毋滥：强相关不足 {top_n} 条就只返回相关的；全不相关返回 []。
 - 候选中有国内来源（language=zh 或 .cn 域名）且强相关时，应适当保留，避免结果全是国际媒体。
 
+【同一事件去重 — 非常重要】
+- 多条候选若报道**同一事件**（如同一笔交易落地、同一产品发布、同一政策），**只保留 1 条**。
+- 合并时选信息最完整、来源最权威的一条，摘要可综合多条信息。
+- 示例：「Worldline 与法农完成法国首笔 Agent 支付」和「法农完成 agentic payment 交易」是同一事件，只能输出一条。
+- **绝不要**在最终结果中出现两条描述同一事件的新闻。
+
 【排序优先级】
 1. 头部公司动态（Stripe, OpenAI, Visa, 支付宝, Coinbase 等）
    ★ 重点关注：{focus_companies}
@@ -75,7 +82,8 @@ def filter_articles(
         if result is None:
             print("[AI] JSON 解析失败，降级使用简单排序")
             return _basic_filter(articles, top_n)
-        return result[:top_n]
+        result = dedup_similar_items(result[:top_n])
+        return result
     except Exception as e:
         print(f"[AI] 筛选异常: {e}")
         return _basic_filter(articles, top_n)
