@@ -21,11 +21,15 @@ def summarize_trend(
 
     titles = "\n".join(f"- {item.get('title', '')}" for item in items[:20])
 
-    prompt = f"""根据以下上周 {direction_cn} 领域新闻标题，用 1-2 句话总结上周关键趋势：
+    prompt = f"""根据以下上周 {direction_cn} 领域新闻标题，总结上周关键趋势。
 
-{titles}
+输出格式要求（严格遵守，简洁易读）：
+- 第一行：一句话核心趋势概述（30字以内），不要"上周""本周"前缀。
+- 之后：2-3 条要点，每条以「1. 」「2. 」编号开头，单条不超过 40 字，提炼具体动向与代表案例。
+- 不要输出多余说明、不要使用分号堆叠成长句。
 
-直接输出总结，不要前缀。"""
+标题列表：
+{titles}"""
 
     try:
         resp = chat_complete(
