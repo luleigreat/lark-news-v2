@@ -41,6 +41,10 @@ cp .env.example .env
 ### 2. 本地运行
 
 ```bash
+#创建虚拟环境并激活
+python3 -m venv .venv
+source .venv/bin/activate
+
 pip install -r requirements.txt
 python daily.py    # 每日推送
 python weekly.py   # 周报推送
