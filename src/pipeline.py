@@ -18,7 +18,7 @@ from src.config import (
     WEEKLY_SEARCH_DAYS,
     WEEKLY_TOP_N,
 )
-from src.filters.date_filter import filter_last_week, filter_yesterday, get_yesterday
+from src.filters.date_filter import filter_last_week, filter_yesterday, get_last_week_range, get_yesterday
 from src.lark.cards import build_daily_card, build_weekly_cards, send_multi_to_lark, send_to_lark
 from src.sources.aggregator import search_direction
 from src.sources.stats import log_ai_result, log_search_stats
@@ -45,8 +45,9 @@ def _search_and_filter(queries, direction, days_back, date_mode: str):
         filtered, df_stats = filter_yesterday(raw)
         target_label = f"昨日 ({get_yesterday()})"
     else:
+        start, end = get_last_week_range()
         filtered, df_stats = filter_last_week(raw)
-        target_label = "上周"
+        target_label = f"上周 ({start} ~ {end})"
 
     stats.date_filter = df_stats
     log_search_stats(stats, label=f"{target_label} 搜索统计")

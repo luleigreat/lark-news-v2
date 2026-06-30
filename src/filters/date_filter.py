@@ -12,11 +12,14 @@ def get_yesterday(now: datetime | None = None) -> date:
 
 
 def get_last_week_range(now: datetime | None = None) -> tuple[date, date]:
-    """返回上周一至上周日（北京时间）"""
-    today = (now or datetime.now(CST)).date()
-    last_sunday = today - timedelta(days=today.weekday() + 1)
-    last_monday = last_sunday - timedelta(days=6)
-    return last_monday, last_sunday
+    """返回昨天往前共 7 天（含昨天）。
+
+    例：周一 6/30 推送 → 6/23（周一）~ 6/29（周日）
+    与「昨日资讯」衔接，避免周二以后推送时整周偏移到更早的日历周。
+    """
+    end = get_yesterday(now)
+    start = end - timedelta(days=6)
+    return start, end
 
 
 def filter_yesterday(

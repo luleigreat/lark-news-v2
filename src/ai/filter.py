@@ -42,12 +42,16 @@ def filter_articles(
     direction_cn = DIRECTION_LABELS.get(direction, direction)
     focus_companies = "、".join(FOCUS_COMPANIES)
     candidate_text = "\n\n".join(candidates)
+    pool_size = len(articles)
+    min_return = min(top_n, pool_size)
 
     if mode == "weekly":
-        quantity_rule = f"""【周报数量要求】
-- 目标：尽量选出 {top_n} 条相关新闻，**尽量凑满名额**。
-- 强相关优先；若强相关不足 {top_n} 条，用中度相关新闻补充，但仍须与支付/卡相关。
-- 只有当候选中相关新闻确实不足时，才可返回少于 {top_n} 条。"""
+        quantity_rule = f"""【周报数量要求 — 最高优先级】
+- 候选池共 {pool_size} 条，目标输出 {top_n} 条。
+- 候选 ≥ {top_n} 条时，**必须返回 {top_n} 条**，不得因「宁缺毋滥」只返回 3~5 条。
+- 候选 {min_return}~{top_n} 条时，**必须返回全部 {min_return} 条**。
+- 强相关优先；不足 {top_n} 条时用中度相关（仍须涉及支付/卡）补足名额。
+- 只有候选池本身不足时，才可返回少于 {top_n} 条。"""
     else:
         quantity_rule = f"""【每日数量要求】
 - 宁缺毋滥：强相关不足 {top_n} 条就只返回相关的；全不相关返回 []。"""
@@ -92,11 +96,58 @@ def filter_articles(
         if result is None:
             print("[AI] JSON 解析失败，降级使用简单排序")
             return _basic_filter(articles, top_n)
-        result = dedup_similar_items(result[:top_n])
-        return result
+
+        result = _resolve_ai_items(result, articles)
+        result = dedup_similar_items(result)
+        result = _backfill_items(result, articles, top_n)
+        return result[:top_n]
     except Exception as e:
         print(f"[AI] 筛选异常: {e}")
         return _basic_filter(articles, top_n)
+
+
+def _resolve_ai_items(result: list[dict], articles: list[Article]) -> list[dict]:
+    """将 AI 返回的 id 映射回原始 url，丢弃无效条目"""
+    resolved = []
+    for item in result:
+        url = item.get("url", "")
+        idx = item.get("id")
+        if not url and idx is not None and 0 <= idx < len(articles):
+            url = articles[idx].url
+        if not url:
+            continue
+        resolved.append({
+            "id": item.get("id", 0),
+            "title": item.get("title", ""),
+            "summary": item.get("summary", ""),
+            "url": url,
+        })
+    return resolved
+
+
+def _backfill_items(selected: list[dict], articles: list[Article], top_n: int) -> list[dict]:
+    """AI 返回不足时，从候选池按时间倒序补足"""
+    if len(selected) >= top_n:
+        return selected
+
+    selected_urls = {_normalize_url(i.get("url", "")) for i in selected}
+    remaining = [
+        a for a in articles
+        if _normalize_url(a.url) not in selected_urls
+    ]
+    if not remaining:
+        return selected
+
+    need = top_n - len(selected)
+    extras = _basic_filter(remaining, need)
+    if extras and len(selected) < top_n:
+        print(f"  [AI 回填] AI 返回 {len(selected)} 条，从候选池补 {len(extras)} 条")
+    return selected + extras
+
+
+def _normalize_url(url: str) -> str:
+    url = (url or "").strip().rstrip("/")
+    return url.split("?")[0].rstrip("/") if "?" in url else url
 
 
 def _basic_filter(articles: list[Article], top_n: int) -> list[dict]:
