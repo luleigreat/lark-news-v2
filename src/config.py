@@ -18,6 +18,18 @@ FOCUS_COMPANIES = [
     "Bybit Card",
 ]
 
+# 用于搜索的企业查询词（消歧义，避免 Kast→康卡斯特/Comcast、Rain→降雨 等误命中）
+FOCUS_COMPANY_QUERIES = [
+    "Rain Card crypto",
+    "MoonPay card",
+    "DogPay crypto card",
+    "RedotPay",
+    "Alchemy Pay",
+    "Kast Card stablecoin",
+    "EtherFi Cash card",
+    "Bybit Card",
+]
+
 AI_PAYMENT_QUERIES = [
     "AI Payment",
     "Agent Payment",
@@ -43,7 +55,7 @@ WEB3_CARD_QUERIES = [
     "加密支付卡",
     "稳定币 支付卡",
     "Web3 支付卡",
-] + FOCUS_COMPANIES
+] + FOCUS_COMPANY_QUERIES
 
 # ── 垂直 RSS 源（仅搜索层之一，见下方说明）────────────────────
 #

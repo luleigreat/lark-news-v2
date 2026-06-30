@@ -65,12 +65,20 @@ def load_week_items(start: date, end: date) -> tuple[list[dict], list[dict]]:
 
 def items_to_articles(items: list[dict], news_date: date) -> list[Article]:
     """将每日推送条目转为 Article，参与周报合并"""
-    pub = datetime(news_date.year, news_date.month, news_date.day, 12, 0, tzinfo=CST)
+    default_pub = datetime(news_date.year, news_date.month, news_date.day, 12, 0, tzinfo=CST)
     articles = []
     for item in items:
         url = item.get("url", "")
         if not url:
             continue
+        pub = default_pub
+        item_date = item.get("date", "")
+        if item_date:
+            try:
+                d = date.fromisoformat(item_date)
+                pub = datetime(d.year, d.month, d.day, 12, 0, tzinfo=CST)
+            except ValueError:
+                pass
         articles.append(Article(
             title=item.get("title", ""),
             description=item.get("summary", ""),

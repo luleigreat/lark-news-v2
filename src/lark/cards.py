@@ -43,10 +43,10 @@ def build_weekly_cards(
     date_range = f"{start.strftime('%m.%d')}-{end.strftime('%m.%d')}"
     empty_text = "📭 上周概况：未发现该方向的相关新闻"
 
-    ai_content = _format_items_md("🤖 AI Agent Payment", ai_items, empty_text)
+    ai_content = _format_items_md("🤖 AI Agent Payment", ai_items, empty_text, show_date=True)
     ai_content += f"\n**📊 上周趋势**\n{ai_trend}"
 
-    web3_content = _format_items_md("💳 Web3 卡 / U 卡", web3_items, empty_text)
+    web3_content = _format_items_md("💳 Web3 卡 / U 卡", web3_items, empty_text, show_date=True)
     web3_content += f"\n**📊 上周趋势**\n{web3_trend}"
 
     return [
@@ -83,6 +83,7 @@ def _format_items_md(
     section_title: str,
     items: list[dict],
     empty_text: str = "📭 昨日概况：未发现该方向的相关新闻",
+    show_date: bool = False,
 ) -> str:
     lines = [f"**{section_title}**\n"]
     if not items:
@@ -92,7 +93,9 @@ def _format_items_md(
             title = item.get("title", "无标题")
             summary = item.get("summary", "")
             url = item.get("url", "")
-            lines.append(f"{i}. **{title}**")
+            date_str = item.get("date", "")
+            date_tag = f" `{_fmt_date(date_str)}`" if show_date and date_str else ""
+            lines.append(f"{i}. **{title}**{date_tag}")
             tail = summary
             if url:
                 tail = (f"{tail} " if tail else "") + f"[→原文]({url})"
@@ -100,6 +103,12 @@ def _format_items_md(
                 lines.append(tail)
             lines.append("")
     return "\n".join(lines)
+
+
+def _fmt_date(date_str: str) -> str:
+    """2026-06-29 → 06.29"""
+    parts = date_str.split("-")
+    return f"{parts[1]}.{parts[2]}" if len(parts) == 3 else date_str
 
 
 def send_to_lark(card: dict) -> bool:

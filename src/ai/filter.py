@@ -7,7 +7,7 @@ from typing import Optional
 from openai import OpenAI
 
 from src.ai.client import chat_complete
-from src.config import FOCUS_COMPANIES, OPENAI_API_KEY
+from src.config import CST, FOCUS_COMPANIES, OPENAI_API_KEY
 from src.filters.event_dedup import dedup_similar_items
 from src.models import Article
 
@@ -50,11 +50,12 @@ def filter_articles(
 
         result = _resolve_ai_items(result, articles)
         result = dedup_similar_items(result)
+        # 仅周报从「每日缓存」（已中文化、已初审）回填；
+        # 每日不再盲目按时间回填，避免塞入不相关内容
         if mode == "weekly":
             result = _backfill_from_cache(result, articles, top_n)
-        else:
-            result = _backfill_items(result, articles, top_n)
         result = _ensure_chinese(result, client)
+        result = _attach_dates(result, articles)
         return result[:top_n]
     except Exception as e:
         print(f"[AI] 筛选异常: {e}")
@@ -76,13 +77,20 @@ def _build_candidates(articles: list[Article]) -> str:
 
 def _direction_rules(direction: str) -> str:
     focus = "、".join(FOCUS_COMPANIES)
+    common_warn = """
+【字符串误命中 — 必须剔除】
+- 公司/关键词仅字符串巧合命中但实际无关的，一律丢弃。例如：
+  Kast ≠ 康卡斯特/卡斯特/Comcast；Rain ≠ 普通降雨；Token ≠ 词元工厂/算力；
+  "支付" 出现在租金缴费、水电缴费等与本方向无关的民生新闻里也要丢弃。"""
+
     if direction == "ai_agent":
         return f"""【AI Agent 支付 — 强相关定义】
 ✅ 保留：AI Agent / 智能体 + 支付/付款/结算/钱包/收单/Agentic Payment/自主支付
 ✅ 保留：Stripe、Visa、万事达、支付宝、微信支付、OpenAI 等推出的 Agent 支付能力
 ❌ 丢弃：AI 炒股/交易活动/交易平台促销（无支付要素）
-❌ 丢弃：AI 助手安全测试、黑客攻击、模型发布、编程工具
-❌ 丢弃：仅提 AI Agent 但无支付/钱包/结算场景"""
+❌ 丢弃：AI 助手安全测试、黑客攻击、模型发布、编程工具、算力/Token 产量
+❌ 丢弃：普通支付数字化（如租金、缴费）但与 AI Agent 无关
+❌ 丢弃：仅提 AI Agent 但无支付/钱包/结算场景{common_warn}"""
 
     return f"""【Web3 卡/U 卡 — 强相关定义】
 ✅ 保留：Crypto Card / 加密卡 / 借记卡 / 预付卡 / U卡 / 稳定币支付卡 / 发卡
@@ -91,7 +99,8 @@ def _direction_rules(direction: str) -> str:
 ❌ 丢弃：单纯稳定币发行、托管、储备、链上统计（如 TRON 账户数、USDT 溢价）
 ❌ 丢弃：稳定币诉讼、交易所股权、证券入股、投资平台接入（如 Aladdin）
 ❌ 丢弃：稳定币宏观政策/央行计划，除非明确涉及支付卡产品
-❌ 丢弃：稳定币交易/杠杆/做市平台，与发卡无关"""
+❌ 丢弃：稳定币交易/杠杆/做市平台，与发卡无关
+❌ 丢弃：美股/存储股/财报等传统金融新闻（如康卡斯特 Comcast）{common_warn}"""
 
 
 def _build_prompt(direction: str, top_n: int, candidate_text: str, mode: str, pool_size: int) -> str:
@@ -100,9 +109,10 @@ def _build_prompt(direction: str, top_n: int, candidate_text: str, mode: str, po
 
     if mode == "weekly":
         quantity_rule = f"""【周报数量要求】
-- 候选池共约 {pool_size} 条，目标最多 {top_n} 条。
-- **优先从「★每日已推送」条目选取**（这些是每日已初审的优质内容），再视需要从「搜索补充」选取。
-- **严格遵守下方强相关定义**，宁可不足 {top_n} 条，也绝不填入不相关新闻凑数。
+- 候选池共约 {pool_size} 条，目标尽量凑满 {top_n} 条。
+- 选取顺序：① 先选「★每日已推送」中符合强相关定义的；② 再从「搜索补充」中选强相关的；
+  ③ 若仍不足 {top_n} 条，可纳入"中度相关"（主题确属本方向、但非头部事件）补足。
+- 红线：无论如何都**不得纳入下方 ❌ 清单中的不相关内容**。宁可少于 {top_n} 条，也不要塞 ❌ 类内容。
 - 禁止用「稳定币行业宏观/链上数据/交易所动态」冒充 Web3 卡新闻。"""
     else:
         quantity_rule = f"""【每日数量要求】
@@ -228,6 +238,16 @@ def _backfill_items(selected: list[dict], articles: list[Article], top_n: int) -
 def _normalize_url(url: str) -> str:
     url = (url or "").strip().rstrip("/")
     return url.split("?")[0].rstrip("/") if "?" in url else url
+
+
+def _attach_dates(items: list[dict], articles: list[Article]) -> list[dict]:
+    """为每条结果附上发布日期（取自对应 Article）"""
+    url_map = {_normalize_url(a.url): a for a in articles}
+    for item in items:
+        art = url_map.get(_normalize_url(item.get("url", "")))
+        if art and art.published:
+            item["date"] = art.published.astimezone(CST).date().isoformat()
+    return items
 
 
 def _basic_filter(articles: list[Article], top_n: int) -> list[dict]:
