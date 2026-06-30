@@ -1,15 +1,22 @@
 """NewsAPI 搜索（中英文）"""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import requests
 
 from src.config import NEWSAPI_KEY
 from src.models import Article
 
+_rate_limited = False
+_rate_limit_logged = False
+
+
+def is_rate_limited() -> bool:
+    return _rate_limited
+
 
 def search_lang(query: str, language: str, days_back: int) -> list[Article]:
-    if not NEWSAPI_KEY:
+    if not NEWSAPI_KEY or _rate_limited:
         return []
 
     from_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
@@ -18,16 +25,38 @@ def search_lang(query: str, language: str, days_back: int) -> list[Article]:
 
 
 def search(query: str, days_back: int) -> list[Article]:
-    if not NEWSAPI_KEY:
+    if not NEWSAPI_KEY or _rate_limited:
         return []
 
     articles = []
     for lang in ("zh", "en"):
+        if _rate_limited:
+            break
         articles.extend(search_lang(query, lang, days_back))
     return articles
 
 
+def _mark_rate_limited(message: str):
+    global _rate_limited, _rate_limit_logged
+    _rate_limited = True
+    if not _rate_limit_logged:
+        print(f"[NewsAPI] 已达请求限额，后续跳过: {message}")
+        _rate_limit_logged = True
+
+
+def _is_rate_limit_error(message: str, status_code: int) -> bool:
+    msg = (message or "").lower()
+    if status_code == 429:
+        return True
+    return any(k in msg for k in ("too many requests", "rate limit", "limited to", "quota"))
+
+
 def _search_lang(query: str, language: str, from_date: str, to_date: str) -> list[Article]:
+    global _rate_limited
+
+    if _rate_limited:
+        return []
+
     try:
         resp = requests.get(
             "https://newsapi.org/v2/everything",
@@ -44,7 +73,11 @@ def _search_lang(query: str, language: str, from_date: str, to_date: str) -> lis
         )
         data = resp.json()
         if data.get("status") != "ok":
-            print(f"[NewsAPI/{language}] 错误: {data.get('message', 'unknown')}")
+            message = data.get("message", "unknown")
+            if _is_rate_limit_error(message, resp.status_code):
+                _mark_rate_limited(message)
+            else:
+                print(f"[NewsAPI/{language}] 错误: {message}")
             return []
 
         articles = []
@@ -70,5 +103,8 @@ def _search_lang(query: str, language: str, from_date: str, to_date: str) -> lis
 
         return articles
     except Exception as e:
-        print(f"[NewsAPI/{language}] 请求异常: {e}")
+        if _is_rate_limit_error(str(e), 0):
+            _mark_rate_limited(str(e))
+        else:
+            print(f"[NewsAPI/{language}] 请求异常: {e}")
         return []

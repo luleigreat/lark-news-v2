@@ -45,13 +45,16 @@ def search_direction(
             all_articles.extend(batch)
         time.sleep(0.2)
 
-        for lang in ("zh", "en"):
-            batch = newsapi.search_lang(query, lang, days_back)
-            if lang == "zh":
-                stats.newsapi_zh += len(batch)
-            else:
-                stats.newsapi_en += len(batch)
-            all_articles.extend(batch)
+        if not newsapi.is_rate_limited():
+            for lang in ("zh", "en"):
+                if newsapi.is_rate_limited():
+                    break
+                batch = newsapi.search_lang(query, lang, days_back)
+                if lang == "zh":
+                    stats.newsapi_zh += len(batch)
+                else:
+                    stats.newsapi_en += len(batch)
+                all_articles.extend(batch)
         time.sleep(0.2)
 
         if i % 4 == 0:
@@ -64,6 +67,8 @@ def search_direction(
 
     stats.raw_total = len(all_articles)
     deduped = dedup_articles(all_articles)
-    deduped = dedup_similar_articles(deduped)
+    # 周报候选多、跨度长，跳过筛选前事件去重，避免过度合并
+    if days_back < 7:
+        deduped = dedup_similar_articles(deduped)
     stats.after_dedup = len(deduped)
     return deduped, stats

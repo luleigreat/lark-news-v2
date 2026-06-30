@@ -91,11 +91,11 @@ def run_weekly() -> bool:
     web3_raw, _ = _search_and_filter(WEB3_CARD_QUERIES, "web3_card", WEEKLY_SEARCH_DAYS, "last_week")
 
     print(f"\n[筛选] AI Agent Payment top {WEEKLY_TOP_N}...")
-    ai_items = filter_articles(ai_raw, "ai_agent", WEEKLY_TOP_N, client)
+    ai_items = filter_articles(ai_raw, "ai_agent", WEEKLY_TOP_N, client, mode="weekly")
     log_ai_result(ai_items, ai_raw, "AI Agent Payment")
 
     print(f"\n[筛选] Web3 卡/U 卡 top {WEEKLY_TOP_N}...")
-    web3_items = filter_articles(web3_raw, "web3_card", WEEKLY_TOP_N, client)
+    web3_items = filter_articles(web3_raw, "web3_card", WEEKLY_TOP_N, client, mode="weekly")
     log_ai_result(web3_items, web3_raw, "Web3 卡/U 卡")
 
     print("\n[AI] 趋势总结...")
