@@ -5,12 +5,14 @@
 ## 架构
 
 ```
-GitHub Actions (4:00 CST 触发)
-  → 多源搜索 (Google News 中英文 + NewsAPI + 垂直 RSS)
-  → 日期硬过滤 (昨天 / 上周)
-  → AI 筛选 + 翻译 + 摘要
-  → Lark 交互式卡片推送
+每日任务:
+  搜索 → 日期过滤 → AI 筛选 → Lark 推送 → 缓存到 .cache/daily/
+
+每周任务:
+  恢复每日缓存 + 搜索上周新闻 → 合并去重 → AI 重筛 Top 10 → Lark 推送 → 清理上周缓存
 ```
+
+GitHub Actions 通过 `actions/cache` 在运行间持久化 `.cache/daily/` 目录。
 
 ## 推送计划
 
