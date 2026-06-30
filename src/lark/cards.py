@@ -94,7 +94,7 @@ def _format_items_md(
             summary = item.get("summary", "")
             url = item.get("url", "")
             date_str = item.get("date", "")
-            date_tag = f" `{_fmt_date(date_str)}`" if show_date and date_str else ""
+            date_tag = f"（{_fmt_date(date_str)}）" if show_date and date_str else ""
             lines.append(f"{i}. **{title}**{date_tag}")
             tail = summary
             if url:
