@@ -63,14 +63,20 @@ def _search_and_filter(queries, direction, days_back, date_mode: str):
 
 
 def _merge_with_cache(searched: list[Article], cached: list[Article], label: str) -> list[Article]:
-    """合并搜索结果与每日缓存，URL 去重"""
-    before = len(searched)
-    merged = dedup_articles(searched + cached)
+    """合并搜索结果与每日缓存，缓存优先"""
+    cached_urls = {_normalize_url(a.url) for a in cached}
+    search_extra = [a for a in searched if _normalize_url(a.url) not in cached_urls]
+    merged = dedup_articles(cached + search_extra)
     print(
-        f"  [合并] {label}: 搜索 {before} 条 + 缓存 {len(cached)} 条 "
+        f"  [合并] {label}: 缓存 {len(cached)} 条 + 搜索新增 {len(search_extra)} 条 "
         f"→ 去重后 {len(merged)} 条"
     )
     return merged
+
+
+def _normalize_url(url: str) -> str:
+    url = (url or "").strip().rstrip("/")
+    return url.split("?")[0].rstrip("/") if "?" in url else url
 
 
 def run_daily() -> bool:

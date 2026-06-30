@@ -81,8 +81,9 @@ RSS_KEYWORDS_AI = [
 ]
 RSS_KEYWORDS_WEB3 = [
     "crypto card", "stablecoin card", "u卡", "加密卡", "支付卡",
-    "debit card", "rain card", "moonpay", "dogpay", "redotpay",
-    "alchemy pay", "kast", "etherfi", "bybit card", "稳定币",
+    "debit card", "prepaid card", "rain card", "moonpay", "dogpay",
+    "redotpay", "alchemy pay", "kast card", "etherfi", "bybit card",
+    "wasabi card", "发卡",
 ]
 
 # ── 环境变量 ──────────────────────────────────────────────────
