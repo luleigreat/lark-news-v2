@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from src.config import CST
 from src.models import Article
+from src.sources.stats import DateFilterStats
 
 
 def get_yesterday(now: datetime | None = None) -> date:
@@ -18,14 +19,50 @@ def get_last_week_range(now: datetime | None = None) -> tuple[date, date]:
     return last_monday, last_sunday
 
 
-def filter_yesterday(articles: list[Article], now: datetime | None = None) -> list[Article]:
+def filter_yesterday(
+    articles: list[Article],
+    now: datetime | None = None,
+) -> tuple[list[Article], DateFilterStats]:
     target = get_yesterday(now)
-    return [a for a in articles if _pub_date(a) == target]
+    kept: list[Article] = []
+    stats = DateFilterStats()
+
+    for a in articles:
+        pub = _pub_date(a)
+        if pub is None:
+            stats.dropped_no_date += 1
+            continue
+        if pub != target:
+            stats.dropped_wrong_date += 1
+            continue
+        kept.append(a)
+        _count_lang(a, stats)
+
+    stats.kept = len(kept)
+    return kept, stats
 
 
-def filter_last_week(articles: list[Article], now: datetime | None = None) -> list[Article]:
+def filter_last_week(
+    articles: list[Article],
+    now: datetime | None = None,
+) -> tuple[list[Article], DateFilterStats]:
     start, end = get_last_week_range(now)
-    return [a for a in articles if start <= (_pub_date(a) or date.min) <= end]
+    kept: list[Article] = []
+    stats = DateFilterStats()
+
+    for a in articles:
+        pub = _pub_date(a)
+        if pub is None:
+            stats.dropped_no_date += 1
+            continue
+        if not (start <= pub <= end):
+            stats.dropped_wrong_date += 1
+            continue
+        kept.append(a)
+        _count_lang(a, stats)
+
+    stats.kept = len(kept)
+    return kept, stats
 
 
 def _pub_date(article: Article) -> date | None:
@@ -35,3 +72,13 @@ def _pub_date(article: Article) -> date | None:
     if pub.tzinfo is None:
         pub = pub.replace(tzinfo=timezone.utc)
     return pub.astimezone(CST).date()
+
+
+def _count_lang(article: Article, stats: DateFilterStats):
+    lang = (article.language or "").lower()
+    if lang == "zh":
+        stats.kept_zh += 1
+    elif lang == "en":
+        stats.kept_en += 1
+    else:
+        stats.kept_other += 1

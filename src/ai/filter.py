@@ -32,7 +32,7 @@ def filter_articles(
     for i, a in enumerate(articles):
         candidates.append(
             f"[{i}] 标题: {a.title}\n"
-            f"    来源: {a.source}\n"
+            f"    来源: {a.source} ({a.language})\n"
             f"    描述: {a.description[:200]}\n"
             f"    链接: {a.url}",
         )
@@ -48,6 +48,7 @@ def filter_articles(
 - 丢弃泛泛的 AI 资讯、模型发布、编程工具、与支付无关的内容。
 - 英文标题翻译为中文（25字内），摘要统一中文输出（80字内）。
 - 宁缺毋滥：强相关不足 {top_n} 条就只返回相关的；全不相关返回 []。
+- 候选中有国内来源（language=zh 或 .cn 域名）且强相关时，应适当保留，避免结果全是国际媒体。
 
 【排序优先级】
 1. 头部公司动态（Stripe, OpenAI, Visa, 支付宝, Coinbase 等）

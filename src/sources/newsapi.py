@@ -1,6 +1,6 @@
 """NewsAPI 搜索（中英文）"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -8,17 +8,22 @@ from src.config import NEWSAPI_KEY
 from src.models import Article
 
 
-def search(query: str, days_back: int) -> list[Article]:
+def search_lang(query: str, language: str, days_back: int) -> list[Article]:
     if not NEWSAPI_KEY:
         return []
 
     from_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
     to_date = datetime.now().strftime("%Y-%m-%d")
+    return _search_lang(query, language, from_date, to_date)
+
+
+def search(query: str, days_back: int) -> list[Article]:
+    if not NEWSAPI_KEY:
+        return []
+
     articles = []
-
     for lang in ("zh", "en"):
-        articles.extend(_search_lang(query, lang, from_date, to_date))
-
+        articles.extend(search_lang(query, lang, days_back))
     return articles
 
 
@@ -50,7 +55,6 @@ def _search_lang(query: str, language: str, from_date: str, to_date: str) -> lis
             pub_time = None
             if a.get("publishedAt"):
                 try:
-                    from datetime import timezone
                     pub_time = datetime.fromisoformat(a["publishedAt"].replace("Z", "+00:00"))
                 except ValueError:
                     pass

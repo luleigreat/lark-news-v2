@@ -6,7 +6,7 @@ from urllib.parse import quote
 import feedparser
 
 from src.models import Article
-from src.utils import clean_html
+from src.utils import clean_html, parse_feed_date
 
 LOCALES = [
     {"hl": "zh-CN", "gl": "CN", "ceid": "CN:zh-Hans", "lang": "zh"},
@@ -14,29 +14,32 @@ LOCALES = [
 ]
 
 
+def search_locale(query: str, locale: dict, days_back: int) -> list[Article]:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
+    return _search_locale(query, locale, cutoff, days_back)
+
+
 def search(query: str, days_back: int) -> list[Article]:
     articles = []
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
-
     for locale in LOCALES:
-        articles.extend(_search_locale(query, locale, cutoff))
-
+        articles.extend(search_locale(query, locale, days_back))
     return articles
 
 
-def _search_locale(query: str, locale: dict, cutoff: datetime) -> list[Article]:
+def _search_locale(query: str, locale: dict, cutoff: datetime, days_back: int) -> list[Article]:
     try:
+        # when 限定时间范围，提升近期新闻召回
+        when = f"when:{days_back}d" if days_back <= 7 else ""
+        q = f"{query} {when}".strip()
         url = (
             f"https://news.google.com/rss/search"
-            f"?q={quote(query)}&hl={locale['hl']}&gl={locale['gl']}&ceid={locale['ceid']}"
+            f"?q={quote(q)}&hl={locale['hl']}&gl={locale['gl']}&ceid={locale['ceid']}"
         )
         feed = feedparser.parse(url)
         articles = []
 
         for entry in feed.entries:
-            pub_time = None
-            if hasattr(entry, "published_parsed") and entry.published_parsed:
-                pub_time = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+            pub_time = parse_feed_date(entry)
 
             if pub_time and pub_time < cutoff:
                 continue

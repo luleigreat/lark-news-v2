@@ -6,16 +6,18 @@ import feedparser
 
 from src.config import RSS_FEEDS
 from src.models import Article
-from src.utils import clean_html
+from src.utils import clean_html, parse_feed_date
+
+
+def search_feed(feed_cfg: dict, keywords: list[str], days_back: int) -> list[Article]:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
+    return _fetch_feed(feed_cfg, keywords, cutoff)
 
 
 def search(keywords: list[str], days_back: int) -> list[Article]:
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
     articles = []
-
     for feed_cfg in RSS_FEEDS:
-        articles.extend(_fetch_feed(feed_cfg, keywords, cutoff))
-
+        articles.extend(search_feed(feed_cfg, keywords, days_back))
     return articles
 
 
@@ -33,9 +35,7 @@ def _fetch_feed(feed_cfg: dict, keywords: list[str], cutoff: datetime) -> list[A
             if not any(kw in text for kw in kw_lower):
                 continue
 
-            pub_time = None
-            if hasattr(entry, "published_parsed") and entry.published_parsed:
-                pub_time = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+            pub_time = parse_feed_date(entry)
 
             if pub_time and pub_time < cutoff:
                 continue
