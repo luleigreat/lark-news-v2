@@ -45,13 +45,33 @@ WEB3_CARD_QUERIES = [
     "Web3 支付卡",
 ] + FOCUS_COMPANIES
 
-# ── 垂直 RSS 源 ─────────────────────────────────────────────
+# ── 垂直 RSS 源（仅搜索层之一，见下方说明）────────────────────
+#
+# 完整搜索架构（每个方向均会执行）：
+#   1. Google News RSS — 按关键词检索，中英文各一遍（覆盖面最广）
+#   2. NewsAPI         — 按关键词检索，中英文各一遍（需 API Key）
+#   3. RSS_FEEDS       — 拉取垂直站点全量 feed，再用关键词本地过滤
+#
+# 因此 RSS_FEEDS 不是全部源，而是对 Google News 的补充，专攻行业垂直媒体。
 
 RSS_FEEDS = [
+    # 国际 Web3 / 加密
     {"name": "CoinDesk", "url": "https://www.coindesk.com/arc/outboundfeeds/rss/", "lang": "en"},
+    {"name": "Cointelegraph", "url": "https://cointelegraph.com/rss", "lang": "en"},
+    {"name": "Decrypt", "url": "https://decrypt.co/feed", "lang": "en"},
+    {"name": "The Block", "url": "https://www.theblock.co/rss.xml", "lang": "en"},
+    # 国际支付 / Fintech
+    {"name": "PYMNTS", "url": "https://www.pymnts.com/feed/", "lang": "en"},
+    {"name": "TechCrunch Fintech", "url": "https://techcrunch.com/category/fintech/feed/", "lang": "en"},
+    # 国内 Web3
     {"name": "PANews", "url": "https://www.panewslab.com/zh/rss/index.xml", "lang": "zh"},
     {"name": "BlockBeats", "url": "https://api.theblockbeats.news/v2/rss/all", "lang": "zh"},
+    {"name": "Odaily", "url": "https://www.odaily.news/rss", "lang": "zh"},
+    {"name": "ChainCatcher", "url": "https://www.chaincatcher.com/rss/clist", "lang": "zh"},
+    # 国内科技 / AI
     {"name": "36氪", "url": "https://36kr.com/feed", "lang": "zh"},
+    {"name": "机器之心", "url": "https://www.jiqizhixin.com/rss", "lang": "zh"},
+    {"name": "钛媒体", "url": "https://www.tmtpost.com/rss.xml", "lang": "zh"},
 ]
 
 # RSS 关键词过滤（标题或摘要命中任一即保留）

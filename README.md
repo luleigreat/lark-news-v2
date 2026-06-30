@@ -78,9 +78,15 @@ lark-news-v2/
 
 ## 搜索源
 
-- **Google News RSS**：中文 (zh-CN) + 英文 (en-US)
-- **NewsAPI**：中文 + 英文（需 API Key）
-- **垂直 RSS**：CoinDesk、PANews、BlockBeats、36氪
+每个方向（AI Agent Payment / Web3 卡）均并行使用三层搜索：
+
+| 层级 | 来源 | 方式 | 说明 |
+|------|------|------|------|
+| 1 | Google News | 按关键词，zh-CN + en-US | 覆盖面最广，免费 |
+| 2 | NewsAPI | 按关键词，zh + en | 需 API Key，主流媒体 |
+| 3 | RSS_FEEDS | 垂直站点 feed + 关键词过滤 | 行业媒体补充 |
+
+`RSS_FEEDS` 配置在 `src/config.py`，当前包含 CoinDesk、Cointelegraph、The Block、PYMNTS、PANews、律动、Odaily、链捕手、36氪、机器之心、钛媒体等 13 个源。可按需增删。
 
 ## 降级策略
 
