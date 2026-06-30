@@ -5,7 +5,8 @@ from typing import Optional
 
 from openai import OpenAI
 
-from src.config import FOCUS_COMPANIES, OPENAI_API_KEY, OPENAI_MODEL
+from src.ai.client import chat_complete
+from src.config import FOCUS_COMPANIES, OPENAI_API_KEY
 from src.models import Article
 
 DIRECTION_LABELS = {
@@ -63,10 +64,10 @@ def filter_articles(
 {candidate_text}"""
 
     try:
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
+        resp = chat_complete(
+            client,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=8000,
+            limit=8000,
         )
         content = (resp.choices[0].message.content or "").strip()
         result = _extract_json_array(content)

@@ -4,7 +4,8 @@ from typing import Optional
 
 from openai import OpenAI
 
-from src.config import OPENAI_API_KEY, OPENAI_MODEL
+from src.ai.client import chat_complete
+from src.config import OPENAI_API_KEY
 from src.ai.filter import DIRECTION_LABELS
 
 
@@ -27,10 +28,10 @@ def summarize_trend(
 直接输出总结，不要前缀。"""
 
     try:
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
+        resp = chat_complete(
+            client,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,
+            limit=1000,
         )
         return (resp.choices[0].message.content or "").strip()
     except Exception as e:
