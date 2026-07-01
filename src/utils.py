@@ -11,6 +11,11 @@ def clean_html(text: str, max_len: int = 300) -> str:
     return text.strip()[:max_len]
 
 
+def has_cjk(text: str) -> bool:
+    """判断文本是否包含中日韩字符"""
+    return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+
 def parse_feed_date(entry: Any) -> Optional[datetime]:
     """从 feedparser entry 解析发布时间，依次尝试 published/updated/created"""
     for attr in ("published_parsed", "updated_parsed", "created_parsed"):

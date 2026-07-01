@@ -8,7 +8,6 @@ from src.filters.event_dedup import dedup_similar_articles
 from src.models import Article
 from src.sources import google_news, newsapi, rss_feeds
 from src.sources.stats import SearchStats
-from src.sources.google_news import LOCALES
 
 DIRECTION_CONFIG = {
     "ai_agent": {
@@ -36,7 +35,10 @@ def search_direction(
     print(f"\n  关键词数: {len(queries)}, 搜索窗口: {days_back} 天")
 
     for i, query in enumerate(queries, 1):
-        for locale in LOCALES:
+        locales = google_news.locales_for_query(query)
+        query_langs = [loc["lang"] for loc in locales]
+
+        for locale in locales:
             batch = google_news.search_locale(query, locale, days_back)
             if locale["lang"] == "zh":
                 stats.google_news_zh += len(batch)
@@ -46,7 +48,7 @@ def search_direction(
         time.sleep(0.2)
 
         if not newsapi.is_rate_limited():
-            for lang in ("zh", "en"):
+            for lang in query_langs:
                 if newsapi.is_rate_limited():
                     break
                 batch = newsapi.search_lang(query, lang, days_back)

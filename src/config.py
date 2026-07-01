@@ -33,28 +33,29 @@ FOCUS_COMPANY_QUERIES = [
 AI_PAYMENT_QUERIES = [
     "AI Payment",
     "Agent Payment",
+    "agentic payment",
     "AI agent payment protocol",
     "autonomous agent payment",
+    "Stripe AI agent",
+    "Visa AI payment",
     "AI智能体支付",
     "AI Agent 支付",
     "智能体支付",
-    "支付宝 AI 支付",
-    "微信支付 AI",
-    "Stripe AI agent",
-    "OpenAI payment",
-    "Visa AI payment",
+    "万事达 智能体支付",
+    "支付宝 智能体",
 ]
 
 WEB3_CARD_QUERIES = [
     "Crypto Card",
     "Stablecoin Card",
     "crypto debit card",
+    "stablecoin payment card",
     "加密货币卡",
     "稳定币卡",
-    "U卡",
     "加密支付卡",
     "稳定币 支付卡",
     "Web3 支付卡",
+    "U卡 稳定币",
 ] + FOCUS_COMPANY_QUERIES
 
 # ── 垂直 RSS 源（仅搜索层之一，见下方说明）────────────────────
@@ -96,6 +97,30 @@ RSS_KEYWORDS_WEB3 = [
     "debit card", "prepaid card", "rain card", "moonpay", "dogpay",
     "redotpay", "alchemy pay", "kast card", "etherfi", "bybit card",
     "wasabi card", "发卡",
+]
+
+# ── 噪音过滤（交易所币价页 / 行情页 / 垃圾站）──────────────────
+# Google News 对 "Crypto Card" 等词会召回大量交易所币价页，这里在入库前直接剔除
+
+SPAM_URL_PATTERNS = [
+    "/price/", "/price-", "how-to-buy", "/buy-", "/markets/",
+    "coinmarketcap.com", "coingecko.com", "x.com/", "twitter.com/",
+    "binance.com", "bitget.com", "gate.io", "kucoin.com", "mexc.com",
+    "htx.com", "bybit.com/en-US/price", "informat.ro",
+]
+SPAM_TITLE_PATTERNS = [
+    "price today", "live price", "price usd", "price live", "market cap",
+    "price prediction", "how to buy", "how to sell", "live charts",
+    "copy trading", "with virtual card", "with credit card",
+    "with bank card", "with debit", "with card", "with a crypto wallet",
+    "实时价格", "兑换 usd", "价格|", "价格、市值", "行情", "币价",
+]
+
+# Google News 链接是 news.google.com 跳转，无法按域名过滤，故按来源名过滤
+# 这些多为交易所币价/教程页，对本主题是噪音（OKX 保留，其有真实 Agent 钱包新闻）
+SPAM_SOURCES = [
+    "bitget", "binance", "gate.io", "gate", "kucoin", "mexc", "htx",
+    "coinmarketcap", "coingecko", "bitcoin foundation", "kabul university",
 ]
 
 # ── 环境变量 ──────────────────────────────────────────────────
