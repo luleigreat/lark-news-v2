@@ -103,6 +103,19 @@ def log_ai_result(items: list[dict], raw: list[Article], label: str):
         region = _guess_region(url)
         print(f"      {i}. [{region}] {title}")
 
+    selected_urls = {_normalize_url(item.get("url", "")) for item in items}
+    dropped = [a for a in raw if _normalize_url(a.url) not in selected_urls]
+    print(f"    被筛掉: {len(dropped)} 条")
+    for i, a in enumerate(dropped, 1):
+        region = _guess_region(a.url)
+        title = (a.title or "")[:50]
+        print(f"      ✗ {i}. [{region}] {title}")
+
+
+def _normalize_url(url: str) -> str:
+    url = (url or "").strip().rstrip("/")
+    return url.split("?")[0].rstrip("/") if "?" in url else url
+
 
 def _guess_region(url: str) -> str:
     zh_domains = (
