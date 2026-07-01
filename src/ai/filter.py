@@ -18,6 +18,19 @@ DIRECTION_LABELS = {
 
 DAILY_CACHE_SOURCE = "每日推送"
 
+_RELEVANCE_KEYWORDS = {
+    "ai_agent": [
+        "ai payment", "agent payment", "智能体支付", "agentic wallet", "agentic payment",
+        "智能体钱包", "支付轨道", "扫码", "agent pay", "ai wallet", "ai 支付",
+        "okx", "agentic", "stripe", "visa", "万事达", "支付宝", "微信", "tron",
+    ],
+    "web3_card": [
+        "crypto card", "stablecoin card", "加密卡", "支付卡", "u卡", "发卡",
+        "debit card", "prepaid card", "bingx card", "bingx", "rain card", "moonpay",
+        "redotpay", "openpayd", "bybit card", "数字资产支付", "预付卡", "gtc", "gtech",
+    ],
+}
+
 
 def filter_articles(
     articles: list[Article],
@@ -50,10 +63,10 @@ def filter_articles(
 
         result = _resolve_ai_items(result, articles)
         result = dedup_similar_items(result)
-        # 仅周报从「每日缓存」（已中文化、已初审）回填；
-        # 每日不再盲目按时间回填，避免塞入不相关内容
         if mode == "weekly":
             result = _backfill_from_cache(result, articles, top_n)
+        else:
+            result = _backfill_by_relevance(result, articles, direction, top_n)
         result = _ensure_chinese(result, client)
         result = _attach_dates(result, articles)
         return result[:top_n]
@@ -84,19 +97,24 @@ def _direction_rules(direction: str) -> str:
   "支付" 出现在租金缴费、水电缴费等与本方向无关的民生新闻里也要丢弃。"""
 
     if direction == "ai_agent":
-        return f"""【AI Agent 支付 — 强相关定义】
-✅ 保留：AI Agent / 智能体 + 支付/付款/结算/钱包/收单/Agentic Payment/自主支付
-✅ 保留：Stripe、Visa、万事达、支付宝、微信支付、OpenAI 等推出的 Agent 支付能力
+        return f"""【AI Agent 支付 — 相关定义】
+✅ 强相关：AI Agent / 智能体 + 支付/付款/结算/收单/Agentic Payment
+✅ 强相关：Agentic Wallet / 智能体钱包（如 OKX Agentic Wallet、NeoSoul 接入智能体钱包）
+✅ 强相关：Stripe、Visa、万事达、支付宝、微信、OpenAI 等推出的 Agent 支付或 AI 钱包能力
+✅ 强相关：公链/平台推出的 AI 支付轨道、AI 支付基建（如 TRON 推动 AI 支付轨道）
+✅ 中度相关（应纳入）：大厂 AI + 钱包/支付布局（腾讯/谷歌发 AI 邮箱钱包、支付宝/微信的 AI 扫码支付时刻）
 ❌ 丢弃：AI 炒股/交易活动/交易平台促销（无支付要素）
-❌ 丢弃：AI 助手安全测试、黑客攻击、模型发布、编程工具、算力/Token 产量
-❌ 丢弃：普通支付数字化（如租金、缴费）但与 AI Agent 无关
-❌ 丢弃：仅提 AI Agent 但无支付/钱包/结算场景{common_warn}"""
+❌ 丢弃：AI 助手安全测试、黑客攻击、纯模型发布、编程工具、算力/Token 产量
+❌ 丢弃：普通民生缴费（租金、水电）与 AI Agent 无关
+❌ 丢弃：仅提 AI Agent 但完全无支付/钱包/结算场景{common_warn}"""
 
-    return f"""【Web3 卡/U 卡 — 强相关定义】
-✅ 保留：Crypto Card / 加密卡 / 借记卡 / 预付卡 / U卡 / 稳定币支付卡 / 发卡
-✅ 保留：{focus} 及同类发卡/支付卡企业的产品、牌照、合作
-✅ 保留：WasabiCard、Bybit Card 等明确发卡主体的新闻
-❌ 丢弃：单纯稳定币发行、托管、储备、链上统计（如 TRON 账户数、USDT 溢价）
+    return f"""【Web3 卡/U 卡 — 相关定义】
+✅ 强相关：Crypto Card / 加密卡 / 借记卡 / 预付卡 / U卡 / 稳定币支付卡 / 发卡
+✅ 强相关：{focus}、BingX Card 及同类发卡/支付卡企业的产品、牌照、合作
+✅ 强相关：WasabiCard、Bybit Card、RedotPay+OpenPayd 等明确发卡/支付卡主体
+✅ 中度相关（应纳入）：交易所/平台新推出 Crypto Card（如 BingX Card 全球数字资产支付）
+✅ 中度相关（应纳入）：企业联合发行稳定币用于跨境支付/发卡基础设施（明确服务支付场景时）
+❌ 丢弃：单纯稳定币发行、托管、储备、链上统计（如 TRON 账户数、USDT 溢价），且无卡/支付场景
 ❌ 丢弃：稳定币诉讼、交易所股权、证券入股、投资平台接入（如 Aladdin）
 ❌ 丢弃：稳定币宏观政策/央行计划，除非明确涉及支付卡产品
 ❌ 丢弃：稳定币交易/杠杆/做市平台，与发卡无关
@@ -116,7 +134,10 @@ def _build_prompt(direction: str, top_n: int, candidate_text: str, mode: str, po
 - 禁止用「稳定币行业宏观/链上数据/交易所动态」冒充 Web3 卡新闻。"""
     else:
         quantity_rule = f"""【每日数量要求】
-- 宁缺毋滥：强相关不足 {top_n} 条就只返回相关的；全不相关返回 []。"""
+- 候选池共约 {pool_size} 条，目标尽量凑满 {top_n} 条。
+- 选取顺序：① 强相关优先；② 强相关不足时纳入「中度相关」（主题明确属于本方向，如大厂 AI 钱包、AI 扫码支付、新发卡、支付基建）。
+- 仅当候选池确实零相关时返回 []；不要因为过于保守而遗漏中度相关条目。
+- 红线：仍须剔除下方 ❌ 清单中的不相关内容。"""
 
     return f"""你是一个行业资讯筛选专家。从候选中选出最多 {top_n} 条「{direction_cn}」新闻。
 
@@ -140,6 +161,50 @@ def _build_prompt(direction: str, top_n: int, candidate_text: str, mode: str, po
 
 候选新闻：
 {candidate_text}"""
+
+
+def _relevance_score(article: Article, direction: str) -> float:
+    text = f"{article.title} {article.description}".lower()
+    return sum(1 for kw in _RELEVANCE_KEYWORDS.get(direction, []) if kw.lower() in text)
+
+
+def _backfill_by_relevance(
+    selected: list[dict],
+    articles: list[Article],
+    direction: str,
+    top_n: int,
+) -> list[dict]:
+    """每日回填：从候选池中按主题关键词补足，避免盲目按时间排序"""
+    if len(selected) >= top_n:
+        return selected
+
+    selected_urls = {_normalize_url(i.get("url", "")) for i in selected}
+    remaining = [a for a in articles if _normalize_url(a.url) not in selected_urls]
+    if not remaining:
+        return selected
+
+    scored = [(a, _relevance_score(a, direction)) for a in remaining]
+    scored = [(a, s) for a, s in scored if s >= 1]
+    scored.sort(
+        key=lambda x: (
+            x[1],
+            x[0].published.timestamp() if x[0].published else 0,
+        ),
+        reverse=True,
+    )
+
+    need = top_n - len(selected)
+    extras = [
+        {
+            "title": a.title[:50],
+            "summary": (a.description or "")[:120],
+            "url": a.url,
+        }
+        for a, _ in scored[:need]
+    ]
+    if extras:
+        print(f"  [相关回填] AI 返回 {len(selected)} 条，按关键词补 {len(extras)} 条")
+    return selected + extras
 
 
 def _backfill_from_cache(selected: list[dict], articles: list[Article], top_n: int) -> list[dict]:

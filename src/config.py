@@ -16,6 +16,7 @@ FOCUS_COMPANIES = [
     "Kast",
     "EtherFi",
     "Bybit Card",
+    "BingX Card",
 ]
 
 # 用于搜索的企业查询词（消歧义，避免 Kast→康卡斯特/Comcast、Rain→降雨 等误命中）
@@ -23,26 +24,35 @@ FOCUS_COMPANY_QUERIES = [
     "Rain Card crypto",
     "MoonPay card",
     "DogPay crypto card",
-    "RedotPay",
+    "RedotPay OpenPayd",
     "Alchemy Pay",
     "Kast Card stablecoin",
     "EtherFi Cash card",
     "Bybit Card",
+    "BingX Card",
+    "GTech crypto card",
 ]
 
 AI_PAYMENT_QUERIES = [
     "AI Payment",
     "Agent Payment",
     "agentic payment",
+    "agentic wallet",
+    "OKX agentic wallet",
     "AI agent payment protocol",
     "autonomous agent payment",
+    "AI payment rails",
     "Stripe AI agent",
     "Visa AI payment",
     "AI智能体支付",
     "AI Agent 支付",
     "智能体支付",
+    "智能体钱包",
     "万事达 智能体支付",
     "支付宝 智能体",
+    "微信支付 AI",
+    "腾讯 AI 钱包",
+    "TRON AI payment",
 ]
 
 WEB3_CARD_QUERIES = [
@@ -90,13 +100,15 @@ RSS_FEEDS = [
 # RSS 关键词过滤（标题或摘要命中任一即保留）
 RSS_KEYWORDS_AI = [
     "ai payment", "agent payment", "智能体支付", "ai agent", "ai 支付",
-    "autonomous payment", "agent pay",
+    "autonomous payment", "agent pay", "agentic wallet", "agentic payment",
+    "智能体钱包", "ai钱包", "支付轨道", "扫码时刻",
 ]
 RSS_KEYWORDS_WEB3 = [
     "crypto card", "stablecoin card", "u卡", "加密卡", "支付卡",
     "debit card", "prepaid card", "rain card", "moonpay", "dogpay",
     "redotpay", "alchemy pay", "kast card", "etherfi", "bybit card",
-    "wasabi card", "发卡",
+    "wasabi card", "bingx card", "openpayd", "gtc", "gtech", "发卡",
+    "数字资产支付", "稳定币 支付",
 ]
 
 # ── 噪音过滤（交易所币价页 / 行情页 / 垃圾站）──────────────────
@@ -119,7 +131,7 @@ SPAM_TITLE_PATTERNS = [
 # Google News 链接是 news.google.com 跳转，无法按域名过滤，故按来源名过滤
 # 这些多为交易所币价/教程页，对本主题是噪音（OKX 保留，其有真实 Agent 钱包新闻）
 SPAM_SOURCES = [
-    "bitget", "binance", "gate.io", "gate", "kucoin", "mexc", "htx",
+    "bitget", "binance", "gate.io", "kucoin", "mexc", "htx",
     "coinmarketcap", "coingecko", "bitcoin foundation", "kabul university",
 ]
 
